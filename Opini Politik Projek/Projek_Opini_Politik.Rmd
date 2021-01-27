@@ -1,0 +1,127 @@
+---
+title: "Opini Politik"
+author: "Projek_DS_Prak"
+date: "1/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(shiny) 
+library(syuzhet) 
+library(wordcloud) 
+library(tm)
+library(RColorBrewer)
+library(NLP)
+
+
+text_df <- read.csv("Opini_Politik.csv", stringsAsFactors =  FALSE)
+
+
+review <- as.character(text_df$comments)
+
+
+get_nrc_sentiment('happy')
+get_nrc_sentiment('excitment')
+
+opini <- get_nrc_sentiment(review)
+
+
+review_sentiment <- cbind(text_df$comments,opini)
+
+```
+
+# script ui (user interface)
+
+
+```{r}
+ui <- fluidPage(
+    
+  
+    titlePanel("Analisis Sentimen Opini Mahasasiwa Terhadap Politik"),
+    
+     sidebarLayout(
+        sidebarPanel(
+           
+        ),
+        
+        mainPanel(
+            plotOutput("asPlot")
+        )
+    )
+)
+```
+
+# script server
+
+```{r}
+server <- function(input, output, session) {
+    as_data <- reactive({
+        
+        input$Update
+        isolate({
+            withProgress({
+                setProgress(message = "Processing analisis...")
+                as_file <- input$as
+                if(!is.null(as_file)){
+                    as_text <- readLines(as_file$datapath)
+                }
+                else
+                {
+                    as_text <- "A Barplot is an immage made of words that..."
+                }
+                
+     })
+        })
+    })
+    
+    barplot_rep <- repeatable(barplot)
+    
+    output$asPlot <- renderPlot({
+     withProgress({
+      setProgress(message = "Creating barplot...")
+      barplot(colSums(opini),col = rainbow(10),ylab = 'count',main = 'Barplot')
+        })
+    
+       })
+    
+}
+
+```
+
+
+# script Run APP
+
+```{r}
+shinyApp(ui = ui, server = server, options = list(height = "500px"))
+```
+
+# wordcloud
+
+```{r}
+
+comm <- read.csv("Opini_politik.csv", header = TRUE)
+corpus <- Corpus(VectorSource(comm$comments))
+corpus[[1]][1]
+
+
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removeWords, c("get", "told", "gave", "took", "get", "can", "said", "asked", "will", "even", "spoke", "got", "really"))
+corpus[[1]][1]
+
+tdm <- TermDocumentMatrix(corpus)
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing = TRUE)
+d <- data.frame(word = names(v), freq=v)
+
+wordcloud(d$word, d$freq, random.order = FALSE, rot.per = 0.3, scale = c(4,.5),max.words = 101,colors = brewer.pal(8,"Dark2"))
+title(main = "Word Cloud - Opini Mahasiswa", font.main = 1, cex.main = 1.5)
+```
